@@ -3,7 +3,7 @@
 A deep learning web application that predicts music genres from audio files using neural networks and audio feature extraction.
 
 ## Demo
-[Live Demo](https://your-app-url.streamlit.app) *(add this after deployment)*
+[Live Demo](https://your-app-url.streamlit.app)
 
 ## Features
 - Classifies music into 10 genres: blues, classical, country, disco, hiphop, jazz, metal, pop, reggae, rock
