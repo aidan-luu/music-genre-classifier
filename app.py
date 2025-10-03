@@ -1,21 +1,9 @@
 import streamlit as st
 import librosa
 import numpy as np
-import tensorflow as tf
-import pickle
 import plotly.graph_objects as go
 
-# Load model and preprocessing objects
-@st.cache_resource
-def load_model_and_preprocessing():
-    model = tf.keras.models.load_model('genre_classifier_model.h5')
-    with open('scaler.pkl', 'rb') as f:
-        scaler = pickle.load(f)
-    genre_classes = np.load('genre_classes.npy', allow_pickle=True)
-    return model, scaler, genre_classes
-
 def extract_features(file_path):
-    """Extract audio features"""
     audio, sample_rate = librosa.load(file_path, duration=30)
     
     mfccs = librosa.feature.mfcc(y=audio, sr=sample_rate, n_mfcc=13)
@@ -45,10 +33,7 @@ def extract_features(file_path):
 
 # Streamlit UI
 st.title("🎵 Music Genre Classifier")
-st.write("Upload an audio file and I'll predict its genre!")
-
-# Load model
-model, scaler, genre_classes = load_model_and_preprocessing()
+st.write("Upload an audio file for feature extraction (ML model loading disabled temporarily)")
 
 # File uploader
 uploaded_file = st.file_uploader("Choose an audio file (.wav, .mp3)", type=['wav', 'mp3'])
@@ -60,51 +45,38 @@ if uploaded_file is not None:
     
     st.audio(uploaded_file)
     
-    with st.spinner("Analyzing audio..."):
+    with st.spinner("Extracting audio features..."):
         # Extract features
         features, audio, sr = extract_features("temp_audio.wav")
         
-        # Reshape and scale
-        features = features.reshape(1, -1)
-        features_scaled = scaler.transform(features)
+        # Display features
+        st.success("Audio features extracted successfully!")
+        st.write(f"Extracted {len(features)} features")
+        st.write(f"Audio length: {len(audio)/sr:.2f} seconds")
+        st.write(f"Sample rate: {sr} Hz")
         
-        # Predict
-        predictions = model.predict(features_scaled)[0]
-        predicted_genre_idx = np.argmax(predictions)
-        predicted_genre = genre_classes[predicted_genre_idx]
-        confidence = predictions[predicted_genre_idx] * 100
-        
-        # Display results
-        st.success(f"**Predicted Genre: {predicted_genre.upper()}**")
-        st.write(f"Confidence: {confidence:.1f}%")
-        
-        # Show all probabilities
-        st.subheader("Genre Probabilities")
-        fig = go.Figure(data=[
-            go.Bar(
-                x=genre_classes,
-                y=predictions * 100,
-                marker_color='lightblue'
-            )
-        ])
-        fig.update_layout(
-            xaxis_title="Genre",
-            yaxis_title="Probability (%)",
-            height=400
-        )
-        st.plotly_chart(fig, use_container_width=True)
+        # Show feature statistics
+        st.subheader("Feature Statistics")
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            st.metric("Mean", f"{np.mean(features):.4f}")
+        with col2:
+            st.metric("Std Dev", f"{np.std(features):.4f}")
+        with col3:
+            st.metric("Min/Max", f"{np.min(features):.4f}/{np.max(features):.4f}")
         
         # Waveform visualization
         st.subheader("Audio Waveform")
-        fig2 = go.Figure()
+        fig = go.Figure()
         time = np.linspace(0, len(audio)/sr, len(audio))
-        fig2.add_trace(go.Scatter(x=time, y=audio, mode='lines', name='Waveform'))
-        fig2.update_layout(
+        fig.add_trace(go.Scatter(x=time, y=audio, mode='lines', name='Waveform'))
+        fig.update_layout(
             xaxis_title="Time (s)",
             yaxis_title="Amplitude",
             height=300
         )
-        st.plotly_chart(fig2, use_container_width=True)
+        st.plotly_chart(fig, use_container_width=True)
 
+st.warning("Note: ML model prediction is temporarily disabled due to deployment compatibility issues.")
 st.markdown("---")
-st.markdown("Built with TensorFlow, Librosa, and Streamlit")
+st.markdown("Built with Librosa and Streamlit")
