@@ -3,7 +3,7 @@
 A deep learning web application that predicts music genres from audio files using neural networks and audio feature extraction.
 
 ## Demo
-[Live Demo]([https://music-genre-classifier-aluu.streamlit.app/](https://huggingface.co/spaces/nontwan/music-genre-classifier))
+[Live Demo](https://huggingface.co/spaces/nontwan/music-genre-classifier)
 
 ## Features
 - Classifies music into 10 genres: blues, classical, country, disco, hiphop, jazz, metal, pop, reggae, rock
