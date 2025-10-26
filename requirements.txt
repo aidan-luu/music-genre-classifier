@@ -5,4 +5,4 @@ numpy<2
 scikit-learn
 plotly
 soundfile
-protobuf<5
+h5py
