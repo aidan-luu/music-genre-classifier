@@ -209,6 +209,11 @@ if uploaded_file is not None:
             if features is not None:
                 st.success(f"✅ Extracted {len(features)} audio features")
 
+                # Debug info
+                st.write(f"Debug: Features shape: {features.shape}")
+                st.write(f"Debug: Model loaded: {_model is not None}")
+                st.write(f"Debug: Scaler loaded: {_scaler is not None}")
+
                 predicted_genre, predictions = predict_genre(features)
 
                 if predicted_genre is not None:
