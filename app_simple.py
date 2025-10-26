@@ -1,27 +1,26 @@
 import streamlit as st
 import librosa
 import numpy as np
-import tensorflow as tf
 import pickle
 import plotly.graph_objects as go
 import os
 import tempfile
 import warnings
 
-# Suppress warnings and set environment variables
+# Suppress warnings
 warnings.filterwarnings('ignore')
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 os.environ['STREAMLIT_SERVER_HEADLESS'] = 'true'
 os.environ['MPLCONFIGDIR'] = tempfile.gettempdir()
-
-# Configure TensorFlow for better deployment
-tf.config.threading.set_inter_op_parallelism_threads(1)
-tf.config.threading.set_intra_op_parallelism_threads(1)
 
 # Load model and preprocessing objects
 @st.cache_resource
 def load_model_and_preprocessing():
     try:
+        # Import TensorFlow only when needed
+        import tensorflow as tf
+        tf.config.threading.set_inter_op_parallelism_threads(1)
+        tf.config.threading.set_intra_op_parallelism_threads(1)
+        
         model = tf.keras.models.load_model('genre_classifier_model.h5')
         with open('scaler.pkl', 'rb') as f:
             scaler = pickle.load(f)
@@ -125,6 +124,10 @@ st.write("Upload an audio file and I'll predict its genre!")
 model, scaler, genre_classes = load_model_and_preprocessing()
 model_loaded = model is not None and scaler is not None and genre_classes is not None
 
+if not model_loaded:
+    st.error("⚠️ Model files not found. Please ensure all model files are present.")
+    st.stop()
+
 # File uploader
 uploaded_file = st.file_uploader("Choose an audio file (.wav, .mp3)", type=['wav', 'mp3'])
 
@@ -202,3 +205,4 @@ if uploaded_file is not None:
 
 st.markdown("---")
 st.markdown("Built with TensorFlow, Librosa, and Streamlit")
+

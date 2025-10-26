@@ -46,19 +46,42 @@ print(f"Training samples: {len(X_train)}")
 print(f"Test samples: {len(X_test)}")
 print(f"Number of features: {X_train.shape[1]}")
 
-# Build model
+# Build improved model with batch normalization
 model = keras.Sequential([
-    layers.Dense(512, activation='relu', input_shape=(X_train.shape[1],)),
+    layers.Dense(512, input_shape=(X_train.shape[1],)),
+    layers.BatchNormalization(),
+    layers.Activation('relu'),
+    layers.Dropout(0.4),
+    
+    layers.Dense(256),
+    layers.BatchNormalization(),
+    layers.Activation('relu'),
+    layers.Dropout(0.4),
+    
+    layers.Dense(128),
+    layers.BatchNormalization(),
+    layers.Activation('relu'),
     layers.Dropout(0.3),
-    layers.Dense(256, activation='relu'),
-    layers.Dropout(0.3),
-    layers.Dense(128, activation='relu'),
-    layers.Dropout(0.3),
+    
+    layers.Dense(64),
+    layers.BatchNormalization(),
+    layers.Activation('relu'),
+    layers.Dropout(0.2),
+    
     layers.Dense(10, activation='softmax')
 ])
 
+# Use learning rate scheduler
+initial_learning_rate = 0.001
+lr_schedule = keras.optimizers.schedules.ExponentialDecay(
+    initial_learning_rate=initial_learning_rate,
+    decay_steps=1000,
+    decay_rate=0.9,
+    staircase=True
+)
+
 model.compile(
-    optimizer='adam',
+    optimizer=keras.optimizers.Adam(learning_rate=lr_schedule),
     loss='sparse_categorical_crossentropy',
     metrics=['accuracy']
 )
@@ -66,13 +89,31 @@ model.compile(
 print("\nModel architecture:")
 model.summary()
 
+# Callbacks for better training
+callbacks = [
+    keras.callbacks.EarlyStopping(
+        monitor='val_accuracy',
+        patience=15,
+        restore_best_weights=True,
+        verbose=1
+    ),
+    keras.callbacks.ReduceLROnPlateau(
+        monitor='val_loss',
+        factor=0.5,
+        patience=5,
+        min_lr=0.00001,
+        verbose=1
+    )
+]
+
 # Train model
 print("\nTraining model...")
 history = model.fit(
     X_train, y_train,
     validation_split=0.2,
-    epochs=100,
+    epochs=150,
     batch_size=32,
+    callbacks=callbacks,
     verbose=1
 )
 
