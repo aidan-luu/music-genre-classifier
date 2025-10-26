@@ -1,8 +1,7 @@
-tensorflow==2.16.1
 streamlit
 librosa
-numpy
+numpy<2
 scikit-learn
 plotly
 soundfile
-protobuf<5
+keras
