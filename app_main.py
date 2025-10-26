@@ -12,13 +12,24 @@ warnings.filterwarnings('ignore')
 os.environ['STREAMLIT_SERVER_HEADLESS'] = 'true'
 os.environ['MPLCONFIGDIR'] = tempfile.gettempdir()
 
-# Only import TFLite, not full TensorFlow
+# Import TFLite - try multiple approaches
+TFLITE_AVAILABLE = False
+tflite = None
+
 try:
+    # Try option 1: TensorFlow
     import tensorflow as tf
+    tflite = tf.lite
     TFLITE_AVAILABLE = True
 except ImportError:
-    TFLITE_AVAILABLE = False
-    st.error("TensorFlow Lite not available. Please install TensorFlow.")
+    try:
+        # Try option 2: Keras 3.0+ has built-in TFLite support
+        import keras
+        # For keras, we'll use a different approach
+        TFLITE_AVAILABLE = True
+        USE_KERAS = True
+    except ImportError:
+        st.error("❌ Neither TensorFlow nor Keras available. Cannot load model.")
 
 # Global variables for model
 _interpreter = None
@@ -40,9 +51,22 @@ def load_tflite_model():
             st.info("💡 Please run convert_to_tflite.py on a platform where TensorFlow works (Linux/Cloud)")
             return False
 
-        # Load TFLite interpreter (this works on macOS!)
-        _interpreter = tf.lite.Interpreter(model_path=tflite_path)
-        _interpreter.allocate_tensors()
+        # Load TFLite interpreter
+        if tflite:
+            # Using TensorFlow
+            _interpreter = tflite.Interpreter(model_path=tflite_path)
+            _interpreter.allocate_tensors()
+        else:
+            # Using Keras - load as h5 instead since Keras doesn't have TFLite interpreter
+            import keras
+            # Actually, let's just convert on the fly
+            st.warning("Using Keras - loading .h5 model instead of .tflite")
+            model_h5_path = 'genre_classifier_model.h5'
+            if os.path.exists(model_h5_path):
+                _interpreter = keras.models.load_model(model_h5_path)
+            else:
+                st.error("Neither .tflite nor .h5 model found")
+                return False
 
         # Get input and output details
         _input_details = _interpreter.get_input_details()
