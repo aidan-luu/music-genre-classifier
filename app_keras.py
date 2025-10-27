@@ -56,17 +56,9 @@ def predict_genre(features):
         return None, None
 
     try:
-        # Reshape features
+        # Reshape and scale features
         features = features.reshape(1, -1)
-
-        # Try using scaler, if it fails due to mismatch, use manual normalization
-        try:
-            features_scaled = st.session_state.scaler.transform(features)
-        except ValueError as e:
-            # Scaler has wrong number of features, use manual normalization
-            st.warning(f"Scaler mismatch (expects {st.session_state.scaler.mean_.shape[0]} features, got {features.shape[1]}). Using manual normalization.")
-            # Simple standardization: (x - mean) / std
-            features_scaled = (features - features.mean()) / (features.std() + 1e-8)
+        features_scaled = st.session_state.scaler.transform(features)
 
         # Run prediction
         predictions = st.session_state.model.predict(features_scaled, verbose=0)[0]
@@ -136,22 +128,17 @@ def extract_features(file_path):
         spectral_flatness_mean = float(np.mean(spectral_flatness))
         spectral_flatness_std = float(np.std(spectral_flatness))
 
-        # Combine all features
+        # Combine all features (41 total to match model)
+        # 13 MFCCs + 12 Chroma + 6 Tonnetz + 7 Spectral Contrast + 3 other = 41
         features = np.concatenate([
             mfccs_mean,                    # 13 features
-            mfccs_std,                     # 13 features
             chroma_mean,                   # 12 features
-            chroma_std,                    # 12 features
             tonnetz_mean,                  # 6 features
             spectral_contrast_mean,        # 7 features
-            np.array([spectral_centroid_mean, spectral_centroid_std]),      # 2 features
-            np.array([spectral_rolloff_mean, spectral_rolloff_std]),        # 2 features
-            np.array([spectral_bandwidth_mean, spectral_bandwidth_std]),    # 2 features
-            np.array([zcr_mean, zcr_std]),           # 2 features
-            np.array([rms_mean, rms_std]),           # 2 features
-            np.array([spectral_flatness_mean, spectral_flatness_std]),      # 2 features
+            np.array([spectral_centroid_mean]),      # 1 feature
+            np.array([zcr_mean]),           # 1 feature
             np.array([tempo])                        # 1 feature
-        ])
+        ])  # Total: 13+12+6+7+1+1+1 = 41 ✓
 
         return features, audio, sample_rate
     except Exception as e:
