@@ -56,9 +56,17 @@ def predict_genre(features):
         return None, None
 
     try:
-        # Reshape and scale features
+        # Reshape features
         features = features.reshape(1, -1)
-        features_scaled = st.session_state.scaler.transform(features)
+
+        # Try using scaler, if it fails due to mismatch, use manual normalization
+        try:
+            features_scaled = st.session_state.scaler.transform(features)
+        except ValueError as e:
+            # Scaler has wrong number of features, use manual normalization
+            st.warning(f"Scaler mismatch (expects {st.session_state.scaler.mean_.shape[0]} features, got {features.shape[1]}). Using manual normalization.")
+            # Simple standardization: (x - mean) / std
+            features_scaled = (features - features.mean()) / (features.std() + 1e-8)
 
         # Run prediction
         predictions = st.session_state.model.predict(features_scaled, verbose=0)[0]
