@@ -20,15 +20,8 @@ except ImportError:
     MODEL_AVAILABLE = False
     st.error("❌ Keras not available")
 
-# Global variables for model
-_model = None
-_scaler = None
-_genre_classes = None
-
 def load_model():
-    """Load Keras model"""
-    global _model, _scaler, _genre_classes
-
+    """Load Keras model into session state"""
     try:
         # Load Keras model
         model_path = 'genre_classifier_model.h5'
@@ -37,17 +30,17 @@ def load_model():
             st.error(f"❌ Model not found: {model_path}")
             return False
 
-        _model = keras.models.load_model(model_path)
+        st.session_state.model = keras.models.load_model(model_path)
 
         # Load scaler
         with open('scaler.pkl', 'rb') as f:
-            _scaler = pickle.load(f)
+            st.session_state.scaler = pickle.load(f)
 
         # Load genre classes
-        _genre_classes = np.load('genre_classes.npy', allow_pickle=True)
+        st.session_state.genre_classes = np.load('genre_classes.npy', allow_pickle=True)
 
         st.success("✅ Model loaded successfully!")
-        st.info(f"🎵 Ready to classify {len(_genre_classes)} genres")
+        st.info(f"🎵 Ready to classify {len(st.session_state.genre_classes)} genres")
 
         return True
 
@@ -59,22 +52,20 @@ def load_model():
 
 def predict_genre(features):
     """Make prediction using Keras model"""
-    global _model, _scaler
-
-    if _model is None or _scaler is None:
+    if 'model' not in st.session_state or 'scaler' not in st.session_state:
         return None, None
 
     try:
         # Reshape and scale features
         features = features.reshape(1, -1)
-        features_scaled = _scaler.transform(features)
+        features_scaled = st.session_state.scaler.transform(features)
 
         # Run prediction
-        predictions = _model.predict(features_scaled, verbose=0)[0]
+        predictions = st.session_state.model.predict(features_scaled, verbose=0)[0]
 
         # Get predicted genre
         predicted_idx = np.argmax(predictions)
-        predicted_genre = _genre_classes[predicted_idx]
+        predicted_genre = st.session_state.genre_classes[predicted_idx]
 
         return predicted_genre, predictions
 
@@ -211,8 +202,8 @@ if uploaded_file is not None:
 
                 # Debug info
                 st.write(f"Debug: Features shape: {features.shape}")
-                st.write(f"Debug: Model loaded: {_model is not None}")
-                st.write(f"Debug: Scaler loaded: {_scaler is not None}")
+                st.write(f"Debug: Model loaded: {'model' in st.session_state}")
+                st.write(f"Debug: Scaler loaded: {'scaler' in st.session_state}")
 
                 predicted_genre, predictions = predict_genre(features)
 
@@ -227,10 +218,10 @@ if uploaded_file is not None:
                     st.subheader("📊 Genre Probabilities")
                     fig = go.Figure(data=[
                         go.Bar(
-                            x=_genre_classes,
+                            x=st.session_state.genre_classes,
                             y=predictions * 100,
                             marker_color=['#FF6B6B' if i == predicted_idx else '#4ECDC4'
-                                        for i in range(len(_genre_classes))],
+                                        for i in range(len(st.session_state.genre_classes))],
                             text=[f"{p*100:.1f}%" for p in predictions],
                             textposition='auto'
                         )
@@ -276,8 +267,8 @@ with st.sidebar:
     st.write("Music genre classification using deep learning")
 
     st.header("🎵 Genres")
-    if _genre_classes is not None:
-        for genre in _genre_classes:
+    if 'genre_classes' in st.session_state:
+        for genre in st.session_state.genre_classes:
             st.write(f"• {genre.title()}")
 
 st.markdown("---")
